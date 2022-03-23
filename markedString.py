@@ -1,5 +1,3 @@
-import math
-
 class markedString:#temporary markedString class, gets overwritten. Only here to make type hinting cleaner
     pass
 
@@ -50,9 +48,8 @@ class markedString:
         return self.__marks[:]
     def __len__(self)-> int:
         return self.__size
-    def __setitem__(self, r: 'slice or index',newVal: 'str object or any type in allowedTypes')-> None:
-        p=lambda x:abs(x)-1 if x<0 else x
-        #<- function to account for negative index
+    def __setitem__(self, r: 'slice or index',newVal: 'str, markedString, type in allowedTypes')-> None:
+        p=lambda x:abs(x)-1 if x<0 else x #<- function to account for negative index
         rType=type(r)
         if type(newVal)==tuple:
             newVal=list(newVal)
@@ -139,6 +136,18 @@ class markedString:
                 self.__sourceString=''.join(unpacked)
                 return
             raise TypeError(f"Index type not recognized: {_typeToStr(rType)}")
+        if nType==markedString:
+            if rType==slice:
+                if t-f!=len(newVal):
+                    raise IndexError(f"Given markedString is larger than the slice given: markedString is {len(newVal)} characters long, assigned to indices[{f},{t})")
+                self.__sourceString=self.__sourceString[:f]+str(newVal)+self.__sourceString[t:]
+                self.__marks=self.__marks[:f]+newVal.marks()+self.__marks[t:]
+                return
+            if rType==int:
+                self.__sourceString=self.__sourceString[:r]+str(newVal)+self.__sourceString[r+1:]
+                self.__marks=self.__marks[:r]+newVal.marks()+self.__marks[r+1:]
+                return
+
         raise TypeError(f"Input datatype not recognized: {_typeToStr(nType)}")
     def __getitem__(self, r: 'slice or index')-> '(ch,mark) or markedString':
         #return mark and data at index given
@@ -261,16 +270,19 @@ class markedString:
     def __mul__(self,value:int)->markedString:
         if type(value)!=int:
             raise TypeError(f"Requires int type for markedString multiplication, got type: '{_typeToStr(value)}'")
-        if value>=0:
+        if value<=0:
             return markedString("")
-        selfCopy=self[:]
-        doubleCount=int(math.log(value,2))
-        singleCount=value-(2**doubleCount)
-        for times in range(doubleCount):
-            selfCopy=selfCopy+selfCopy
-        for times in range(singleCount):
-            selfCopy=selfCopy+self[:]
-        return selfCopy
+        mLst=self.__marks[:]*value
+        mStr=self.__sourceString*value
+        return markedString(mStr,mLst,allowedTypes=self.allowedTypes[:])
+    def __rmul__(self,value:int)->markedString:
+        if type(value)!=int:
+            raise TypeError(f"Requires int type for markedString multiplication, got type: '{_typeToStr(value)}'")
+        if value<=0:
+            return markedString("")
+        mLst=self.__marks[:]*value
+        mStr=self.__sourceString*value
+        return markedString(mStr,mLst,allowedTypes=self.allowedTypes[:])
     def capitalize(self)-> markedString:
         tempStr=self.__sourceString.capitalize()
         return markedString(tempStr,self.__marks,allowedTypes=self.allowedTypes)
@@ -465,7 +477,9 @@ markedString.__setitem__.__doc__="""Assign data to either internal string, or in
 If values are of string type, the internal string will be modified
 If the value is of a type contained in allowedTypes, the internal mark list will be modified.
 slice indexing and assignment is supported
-Assigning a single mark or character to a slice will result in all elements in the slice being updated"""
+Assigning a single mark or character to a slice will result in all elements in the slice being updated
+If a markedString is passed to a single index, markedString will be inserted at index,
+thus replacing character and mark at index"""
 markedString.__getitem__.__doc__="""Get mark and character at index
 If single index is passed, return (character,mark) at index
 If slice is passed, a markedString object will be returned
@@ -542,10 +556,12 @@ Example:  'Time : %d:%d' % (hour,minute)
 %f = expected float type
 %s = expected str type
 %m = expected markedString type"""
+markedString.__mul__.__doc__="Duplicate markedString for integer number of times"
+markedString.__rmul__.__doc__="Duplicate markedString for integer number of times"
 #--------------------------------------------------------------------
 
 if __name__=="__main__":
-    ignores=['__getattribute__','__rmod__']
+    ignores=['__getattribute__','__rmod__','__new__']
     s=['STR:']
     for a in str.__dict__:
         if not a in markedString.__dict__ and not a in s and not a in ignores:
