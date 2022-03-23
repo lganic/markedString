@@ -1,3 +1,5 @@
+fType=type
+
 class markedString:#temporary markedString class, gets overwritten. Only here to make type hinting cleaner
     pass
 
@@ -8,13 +10,13 @@ def _mask(s: str, chrC: int = 100)-> str:#for error reporting
 
 #determine type of variable passed, and return str version for error reporting
 def _typeToStr(variable: type)-> str:
-    if type(variable)==type:
+    if fType(variable)==type:
         return str(variable).split("'")[1]
-    return str(type(variable)).split("'")[1]
+    return str(fType(variable)).split("'")[1]
 
 #convert list to string, but withought padding spaces
 def _bLstStr(lst: list)-> str:
-    if type(lst)!=list:
+    if fType(lst)!=list:
         return str(lst)
     if len(lst)==0:
         return '[]'
@@ -24,8 +26,10 @@ def _bLstStr(lst: list)-> str:
     out+=']'
     return out
 
+
+
 class markedString:
-    def __init__(self, sourceString: str, marks: list = None, allowedTypes: list = [int,bool,type(None)][:])-> markedString:
+    def __init__(self, sourceString: str, marks: list = None, allowedTypes: list = [int,bool,fType(None)][:])-> markedString:
         self.__size=len(sourceString)
         self.allowedTypes=allowedTypes
         if marks is not None:
@@ -34,7 +38,7 @@ class markedString:
                 raise IndexError(f"Given mark list and given string size do not match: {_mask(sourceString)}  {_mask(_bLstStr(marks))}")
             for item in marks:
                 #check that all items in given mark list are valid mark types
-                if not type(item) in self.allowedTypes:
+                if not fType(item) in self.allowedTypes:
                     raise TypeError(f"Type not recognized as mark: ({_typeToStr(item)}), change allowedTypes to fix")
         if marks is None:
             #no default marks, initalize mark list to all None
@@ -50,10 +54,10 @@ class markedString:
         return self.__size
     def __setitem__(self, r: 'slice or index',newVal: 'str, markedString, type in allowedTypes')-> None:
         p=lambda x:abs(x)-1 if x<0 else x #<- function to account for negative index
-        rType=type(r)
-        if type(newVal)==tuple:
+        rType=fType(r)
+        if fType(newVal)==tuple:
             newVal=list(newVal)
-        nType=type(newVal)
+        nType=fType(newVal)
         if rType==slice:
             #if a slice is given, check that the slice is within bounds of string
             f, t, step=r.indices(self.__size)
@@ -68,7 +72,7 @@ class markedString:
             #a list of marks was passed for batch assignment
             #check that a slice was passed, as currently a slice is required for batch assignment
             if rType==slice:
-                temp=[type(a) in self.allowedTypes for a in newVal]
+                temp=[fType(a) in self.allowedTypes for a in newVal]
                 #check that all types in input mark list are valid types
                 if False in temp:
                     raise TypeError(f"Type in mark assignment list is not allowed: {_typeToStr(newVal[temp.index(False)])}")
@@ -149,13 +153,13 @@ class markedString:
                 return
 
         raise TypeError(f"Input datatype not recognized: {_typeToStr(nType)}")
-    def __getitem__(self, r: 'slice or index')-> '(ch,mark) or markedString':
+    def __getitem__(self, r: 'index or slice')-> '(ch,mark) or markedString':
         #return mark and data at index given
         #if index is int, return (ch,mark) at index
         #if index is slice, return markedString
-        if type(r)==int:
+        if fType(r)==int:
             return (self.__sourceString[r],self.__marks[r])
-        if type(r)==slice:
+        if fType(r)==slice:
             return markedString(self.__sourceString[r],self.__marks[r][:],allowedTypes=self.allowedTypes)
         #type was not slice or index, throw error
         raise TypeError(f"Index type not recognized: {_typeToStr(r)}")
@@ -163,7 +167,7 @@ class markedString:
         return self.__sourceString
     def __iadd__(self, otherMarkedString: markedString)-> None:
         #check that otherMarkedString is of type markedString
-        if type(otherMarkedString)!=markedString:
+        if fType(otherMarkedString)!=markedString:
             raise TypeError(f"Attempting to add {_typeToStr(otherMarkedString)} to markedString object, only markedString objects can be added together")
         self.__size+=len(otherMarkedString)
         self.__sourceString+=str(otherMarkedString)
@@ -171,14 +175,14 @@ class markedString:
         return self
     def __add__(self, otherMarkedString: markedString)-> markedString:
         #check that otherMarkedString is of type markedString
-        if type(otherMarkedString)!=markedString:
+        if fType(otherMarkedString)!=markedString:
             raise TypeError(f"Attempting to add {_typeToStr(otherMarkedString)} to markedString object, only markedString objects can be added together")
         tempStr=self.__sourceString+str(otherMarkedString)
         tempMarks=self.__marks+otherMarkedString.marks()
         out=markedString(tempStr,tempMarks,allowedTypes=self.allowedTypes)
         return out
     def __contains__(self, data: 'str, markedString, list of allowedTypes, or type in allowedTypes')-> bool:
-        dType=type(data)
+        dType=fType(data)
         if dType in self.allowedTypes:
             #data is a mark, check if the mark is currently in the mark list
             return data in self.__marks
@@ -199,9 +203,9 @@ class markedString:
                     if self[index:index+len(data)]==data:
                         return True
         return False
-    def __eq__(self, otherMarkedString: 'datatype in allowedTypes or str')-> bool:
+    def __eq__(self, otherMarkedString: markedString)-> bool:
         #check that type of input is markedString
-        if type(otherMarkedString)!=markedString:
+        if fType(otherMarkedString)!=markedString:
             raise TypeError(f"Attempting to check equal: {_typeToStr(otherMarkedString)} to markedString object, only markedString objects can be tested together")
         #check that the sizes of the given markedString matches
         #(this would be caught in the main check but its way faster when they are different sizes)
@@ -215,7 +219,7 @@ class markedString:
             yield (ch,mark)
     def __ne__(self, other: markedString)-> bool:
         #check that type of input is markedString
-        if type(other)!=markedString:
+        if fType(other)!=markedString:
             raise TypeError(f"Attempting to check not equal: {_typeToStr(other)} to markedString object, only markedString objects can be tested together")
         #check that the sizes of the given markedString matches
         #(this would be caught in the main check but its way faster when they are different sizes)
@@ -228,31 +232,31 @@ class markedString:
     def __sizeof__(self)-> int:
         return self.__sourceString.__sizeof__()+self.__marks.__sizeof__()+self.__size.__sizeof__()+self.allowedTypes.__sizeof__()
     def __lt__(self,other: 'str or markedString')-> bool:
-        if type(other)==markedString:
+        if fType(other)==markedString:
             return self.__sourceString<str(other)
-        if type(other)==str:
+        if fType(other)==str:
             return self.__sourceString<other
         raise TypeError(f"Type not recognized for less than comparison: '{_typeToStr(other)}' type must be either str or markedString")
     def __le__(self,other: 'str or markedString')-> bool:
-        if type(other)==markedString:
+        if fType(other)==markedString:
             return self.__sourceString<=str(other)
-        if type(other)==str:
+        if fType(other)==str:
             return self.__sourceString<=other
         raise TypeError(f"Type not recognized for less than/eq comparison: '{_typeToStr(other)}' type must be either str or markedString")
     def __gt__(self,other: 'str or markedString')-> bool:
-        if type(other)==markedString:
+        if fType(other)==markedString:
             return self.__sourceString>str(other)
-        if type(other)==str:
+        if fType(other)==str:
             return self.__sourceString>other
         raise TypeError(f"Type not recognized for less than comparison: '{_typeToStr(other)}' type must be either str or markedString")
     def __ge__(self,other: 'str or markedString')-> bool:
-        if type(other)==markedString:
+        if fType(other)==markedString:
             return self.__sourceString>=str(other)
-        if type(other)==str:
+        if fType(other)==str:
             return self.__sourceString>=other
         raise TypeError(f"Type not recognized for less than/eq comparison: '{_typeToStr(other)}' type must be either str or markedString")
     def __mod__(self,other)->markedString:
-        if type(other)!=tuple and type(other)!=list:
+        if fType(other)!=tuple and fType(other)!=list:
             other=(other,)
         if len(other)!=self.__sourceString.count("%"):
             raise TypeError(f"Number of format options does not equal number of arguments given: '{_mask(self.__sourceString)}' given {len(other)} arguments")
@@ -261,14 +265,14 @@ class markedString:
         for index, item in enumerate(other):
             fInd=self.__sourceString.find('%')
             lTy=self.__sourceString[fInd+1]
-            if type(item)!=letterCodes[lTy]:
+            if fType(item)!=letterCodes[lTy]:
                 raise TypeError(f"Mod string not given correct types, item:{index} expected: '{_typeToStr(letterCodes[lTy])}' but got '{_typeToStr(item)}'")
-            if type(item)!=markedString:
+            if fType(item)!=markedString:
                 item=markedString(str(item),allowedTypes=self.allowedTypes)
             selfCopy=selfCopy[:fInd]+item+selfCopy[fInd+2:]
         return selfCopy
     def __mul__(self,value:int)->markedString:
-        if type(value)!=int:
+        if fType(value)!=int:
             raise TypeError(f"Requires int type for markedString multiplication, got type: '{_typeToStr(value)}'")
         if value<=0:
             return markedString("")
@@ -276,7 +280,7 @@ class markedString:
         mStr=self.__sourceString*value
         return markedString(mStr,mLst,allowedTypes=self.allowedTypes[:])
     def __rmul__(self,value:int)->markedString:
-        if type(value)!=int:
+        if fType(value)!=int:
             raise TypeError(f"Requires int type for markedString multiplication, got type: '{_typeToStr(value)}'")
         if value<=0:
             return markedString("")
@@ -290,9 +294,9 @@ class markedString:
         if self.__size==0:
             #if current length of self is 0, self cannot end in other
             return False
-        if type(other)==tuple:
+        if fType(other)==tuple:
             other=list(other)
-        dType=type(other)
+        dType=fType(other)
         if dType in self.allowedTypes:
             return self.__marks[-1]==other
         if dType==list:
@@ -309,9 +313,9 @@ class markedString:
             start=0
         if end==None:
             end=self.__size
-        if type(other)==tuple:
+        if fType(other)==tuple:
             other=list(other)
-        dType=type(other)
+        dType=fType(other)
         if dType in self.allowedTypes:#if datatype is mark check if mark list contains data
             try:
                 return self.__marks.index(other,start,end)#attempt list index
@@ -343,9 +347,9 @@ class markedString:
             start=0
         if end==None:
             end=self.__size
-        if type(other)==tuple:
+        if fType(other)==tuple:
             other=list(other)
-        dType=type(other)
+        dType=fType(other)
         if dType in self.allowedTypes:#if datatype is mark check if mark list contains data
             try:
                 return self.__marks.index(other,start,end)#attempt list index
@@ -402,10 +406,10 @@ class markedString:
     def isupper(self):
         return self.__sourceString.isupper()
     def join(self,iterable: 'str, markedString, list of str, list of markedString')-> markedString:
-        if type(iterable)==str:
+        if fType(iterable)==str:
             #if iterable is string, convert to markedString
             iterable=markedString(iterable,allowedTypes=self.allowedTypes)
-        if type(iterable)==markedString:
+        if fType(iterable)==markedString:
             tS=self.__sourceString.join(str(iterable[:]))#create output string using string join
             tml=iterable.marks()#load iterables mark list
             tL=[tml[0]]#create output mark list object from first object in mark list
@@ -413,18 +417,18 @@ class markedString:
                 tL+=self.__marks#add copy of mark list
                 tL+=[mark]#add next mark
             return markedString(tS,tL,allowedTypes=self.allowedTypes)
-        if type(iterable)==tuple:
+        if fType(iterable)==tuple:
             iterable=list(tuple)
-        if type(iterable)==list:
+        if fType(iterable)==list:
             #I assume 1 dimensional list that is not jagged
             if len(iterable)==0:
                 #account for empty input list
                 return markedString("",allowedTypes=self.allowedTypes)
-            if type(iterable[0])==str:
+            if fType(iterable[0])==str:
                 #iterable is list of strings, convert all strings in list to markedString
                 for i, a in enumerate(iterable):
                     iterable[i]=markedString(a,allowedTypes=self.allowedTypes)
-            elif type(iterable[0])!=markedString:#iterable is not of recognized type, throw error
+            elif fType(iterable[0])!=markedString:#iterable is not of recognized type, throw error
                 raise TypeError(f"List of type: '{_typeToStr(iterable[0])}' not joinable")
             out=iterable[0][:]#create output from first markedString in list
             for otherMarkedString in iterable[1:]:#loop over all but first markedString
@@ -440,9 +444,9 @@ class markedString:
             return (self[:],markedString('',allowedTypes=self.allowedTypes),markedString('',allowedTypes=self.allowedTypes))
         return (self[:ind],self[ind:ind+len(sep)],self[ind+len(sep):])
     def replace(self,old: 'str,markedString,list of allowedTypes, or type in allowedTypes',new: 'str or markedString',count: int =None)->markedString:
-        if type(new)!=str and type(new)!=markedString:
+        if fType(new)!=str and fType(new)!=markedString:
             raise TypeError(f"New string must be either str or markedString, type: '{_typeToStr(new)}' is not recognized")
-        if type(new)==str:
+        if fType(new)==str:
             new=markedString(new,allowedTypes=self.allowedTypes)
         selfCopy=self[:]
         class inf:
