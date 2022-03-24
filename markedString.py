@@ -365,6 +365,40 @@ class markedString:
                     return fI
                 start=fI+searchListSize
         raise TypeError(f"Type given has no correlation to this markedString, given type: {_typeToStr(dType)}, Expected types: str,list or any in list:{str([_typeToStr(a) for a in self.allowedTypes])}")
+    def rfind(self,other: 'str, markedString, list of allowedTypes, or type in allowedTypes',start=None,end=None)-> int:
+        if start==None:
+            start=0
+        if end==None:
+            end=self.__size
+        if fType(other)==tuple:
+            other=list(other)
+        dType=fType(other)
+        if dType in self.allowedTypes:#if datatype is mark check if mark list contains data
+            try:
+                return self.__marks.rindex(other,start,end)#attempt list index
+            except ValueError:
+                return -1#item not in list, return -1
+        if dType==list:
+            if len(other)<=len(self.__marks):#check if input is larger than mark list size
+                for index in range(end-len(other),start-1,-1):#loop over possible indicies for sublist
+                    if self.__marks[index:index+len(other)]==other:#check list
+                        return index
+            return -1
+        if dType==str:
+            return self.__sourceString.rfind(other,start,end)
+        if dType==markedString:
+            searchList=other.marks()#load substring data, for optimization
+            searchStr=str(other)
+            searchListSize=len(searchList)
+            while True:
+                fI=self.__sourceString.rfind(searchStr,start,end)#find substring index in source string
+                if fI==-1 or fI>=end:#check if substring found, and that found substring is in range
+                    return -1
+                #check if list at index matches target list
+                if self.__marks[fI:fI+len(searchList)]==searchList:
+                    return fI
+                end=fI
+        raise TypeError(f"Type given has no correlation to this markedString, given type: {_typeToStr(dType)}, Expected types: str,list or any in list:{str([_typeToStr(a) for a in self.allowedTypes])}")
     def index(self,other: 'str, markedString, list of allowedTypes, or type in allowedTypes',start=None,end=None)-> int:
         if start==None:
             start=0
@@ -377,13 +411,13 @@ class markedString:
             try:
                 return self.__marks.index(other,start,end)#attempt list index
             except ValueError:
-                raise ValueError(f"Item not in mark list: {_mask(other)}")#item not in list, return -1
+                raise ValueError(f"Item not in mark list")#item not in list, return -1
         if dType==list:
             if len(other)<=len(self.__marks):#check if input is larger than mark list size
                 for index in range(start,min(len(self.__marks)-len(other)+1,end)):#loop over possible indicies for sublist
                     if self.__marks[index:index+len(other)]==other:#check list
                         return index
-            raise ValueError(f"List substring not found in markedString: {_mask(_bLstStr(other))}")
+            raise ValueError(f"List substring not found in markedString")
         if dType==str:
             return self.__sourceString.find(other,start,end)
         if dType==markedString:
@@ -399,6 +433,40 @@ class markedString:
                     return fI
                 start=fI+searchListSize
         raise TypeError(f"Type given has no correlation to this markedString, given type: {_typeToStr(dType)}, Expected types: str,list or any in list:{_bLstStr([_typeToStr(a) for a in self.allowedTypes])}")
+    def rindex(self,other: 'str, markedString, list of allowedTypes, or type in allowedTypes',start=None,end=None)-> int:
+        if start==None:
+            start=0
+        if end==None:
+            end=self.__size
+        if fType(other)==tuple:
+            other=list(other)
+        dType=fType(other)
+        if dType in self.allowedTypes:#if datatype is mark check if mark list contains data
+            try:
+                return self.__marks.rindex(other,start,end)#attempt list index
+            except ValueError:
+                raise ValueError("Mark not found in mark list")
+        if dType==list:
+            if len(other)<=len(self.__marks):#check if input is larger than mark list size
+                for index in range(end-len(other),start-1,-1):#loop over possible indicies for sublist
+                    if self.__marks[index:index+len(other)]==other:#check list
+                        return index
+            raise ValueError("Sublist not found in mark list")
+        if dType==str:
+            return self.__sourceString.rindex(other,start,end)
+        if dType==markedString:
+            searchList=other.marks()#load substring data, for optimization
+            searchStr=str(other)
+            searchListSize=len(searchList)
+            while True:
+                fI=self.__sourceString.rfind(searchStr,start,end)#find substring index in source string
+                if fI==-1 or fI>=end:#check if substring found, and that found substring is in range
+                    raise ValueError("markedString not found in markedString")
+                #check if list at index matches target list
+                if self.__marks[fI:fI+len(searchList)]==searchList:
+                    return fI
+                end=fI
+        raise TypeError(f"Type given has no correlation to this markedString, given type: {_typeToStr(dType)}, Expected types: str,list or any in list:{str([_typeToStr(a) for a in self.allowedTypes])}")
     def isalnum(self) -> bool:
         return self.__sourceString.isalnum(data)
     def isnum(self) -> bool:
@@ -642,7 +710,7 @@ maxSplit is number of splits which will occur, if maxSplit is None, there is not
 #--------------------------------------------------------------------
 
 if __name__=="__main__":
-    ignores=['__getattribute__','__rmod__','__new__',"encode"]
+    ignores=['__getattribute__','__new__',"encode"]
     s=['STR:']
     for a in str.__dict__:
         if not a in markedString.__dict__ and not a in s and not a in ignores:
