@@ -649,6 +649,17 @@ class markedString:
         return outputList
     def title(self):
         return markedString(self.__sourceString.title(),self.__marks[:],allowedTypes=self.allowedTypes)
+    def center(self,width,fillMarkedString=None):
+        width-=self.__size
+        selfCopy=self[:]
+        if width<=0:
+            return selfCopy
+        if fillMarkedString is None:
+            fillMarkedString=markedString(" ",allowedTypes=self.allowedTypes)
+        if len(fillMarkedString)!=1:
+            raise TypeError("fill string must be 1 character long")
+        selfCopy=fillMarkedString*(width//2)+selfCopy+fillMarkedString*(width//2+width%2)
+        return selfCopy
 
 
 #DOCUMENTATION
@@ -757,6 +768,8 @@ markedString.rsplit.__doc__="""Split string by delimiter, starting from the back
 maxSplit describes number of splits to occur, if None there is no limit"""
 markedString.title.__doc__="""Return new markedString where all words have their first
 letter capitalized"""
+markedString.center.__doc__="""Return new markedString where string is centered with padding spaces
+if fillMarkedString is passed, the padding will be the markedString"""
 #--------------------------------------------------------------------
 
 if __name__=="__main__":
