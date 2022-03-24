@@ -607,6 +607,48 @@ class markedString:
         #get string after last found seperator
         outputList.append(self[lR:])
         return outputList
+    def rsplit(self,sep : 'str,markedString,list of allowedTypes, type in allowedTypes'=None,maxSplit : int = None)->'list of markedString':
+        #determine type of the seperator now, for optimization purposes
+        sT=fType(sep)
+        if sT!=str and sT!=markedString and sT!=list and not sT in self.allowedTypes:
+            raise TypeError(f"Type not recognized for markedString split: '{_typeToStr(sT)}'")
+        #if the seperator is none, return copy of self in list
+        if sep==None:
+            return [self[:]]
+        #'infinity' class for infinite split count
+        class inf:
+            def __isub__(self,o):
+                return self
+            def __gt__(self,o):
+                return True
+        if maxSplit==None:
+            maxSplit=inf()
+        uR=self.__size
+        outputList=[]
+        #is sT in self.allowedTypes seperator is a single element, so length 1
+        if sT in self.allowedTypes:
+            sepLen=1
+        else:
+            sepLen=len(sep)
+        #if maxSplit is inf maxSplit>0 is always true
+        while maxSplit>0:
+            maxSplit-=1
+            #get index of next seperator
+            index=self.rfind(sep,0,uR)
+            #if seperator not found break out of loop
+            if index==-1:
+                break
+            else:
+                #seperator found, prepend substring to output
+                print(self[index+sepLen:uR])
+                outputList=[self[index+sepLen:uR]]+outputList#Why is this not reversed
+            #assign index after current seperator to lower find range
+            uR=index
+        #get string after last found seperator
+        outputList=[self[:uR]]+outputList
+        return outputList
+    def title(self):
+        return markedString(self.__sourceString.title(),self.__marks[:],allowedTypes=self.allowedTypes)
 
 
 #DOCUMENTATION
@@ -683,11 +725,11 @@ Source markedString is inserted inbetween elements of the iterable
 Works identically to str.join
 If a str is passed either on its own or in a list, it is converted into a markedString"""
 markedString.lower.__doc__="Return copy of markedString where internal string is all lowercase"
-markedString.partition.__doc__="""Partition markedString into 3 pieces by searching for delimeter
-First element of tuple is markedString containing string and marks before delimeter
-Second element is delimeter
-Third element is markedString following delimeter
-If delimeter is not found in markedString, markedString followed by two empty markedStrings are returned
+markedString.partition.__doc__="""Partition markedString into 3 pieces by searching for delimiter
+First element of tuple is markedString containing string and marks before delimiter
+Second element is delimiter
+Third element is markedString following delimiter
+If delimiter is not found in markedString, markedString followed by two empty markedStrings are returned
 If a str is passed, the marks are not taken into account
 If a mark list or mark is passed, the string is not taken into account"""
 markedString.__lt__.__doc__="Check internal string less than"
@@ -707,10 +749,18 @@ markedString.replace.__doc__="""Replace old value with markedString
 Count describes number of replacements, if it is None all old values will be replaced"""
 markedString.split.__doc__="""Split markedString by seperator
 maxSplit is number of splits which will occur, if maxSplit is None, there is not limit"""
+markedString.rfind.__doc__="""Find substring, sublist or mark, from back of markedString
+Return -1 if not found"""
+markedString.rindex.__doc__="""Find substring, sublist or mark, from back of markedString
+Raise ValueError if not found"""
+markedString.rsplit.__doc__="""Split string by delimiter, starting from the back
+maxSplit describes number of splits to occur, if None there is no limit"""
+markedString.title.__doc__="""Return new markedString where all words have their first
+letter capitalized"""
 #--------------------------------------------------------------------
 
 if __name__=="__main__":
-    ignores=['__getattribute__','__new__',"encode"]
+    ignores=['__getattribute__','__new__',"encode","casefold"]
     s=['STR:']
     for a in str.__dict__:
         if not a in markedString.__dict__ and not a in s and not a in ignores:
@@ -720,8 +770,6 @@ if __name__=="__main__":
         if not a in markedString.__dict__ and not a in s and not a in ignores:
             s.append(a)
     if len(s)>0:
-        import os
-        os.system("cls")
         print("Needs implementing")
         for a in s:
             print(a)
