@@ -146,10 +146,12 @@ class markedString:
                     raise IndexError(f"Given markedString is larger than the slice given: markedString is {len(newVal)} characters long, assigned to indices[{f},{t})")
                 self.__sourceString=self.__sourceString[:f]+str(newVal)+self.__sourceString[t:]
                 self.__marks=self.__marks[:f]+newVal.marks()+self.__marks[t:]
+                self.__size=len(self.__sourceString)
                 return
             if rType==int:
                 self.__sourceString=self.__sourceString[:r]+str(newVal)+self.__sourceString[r+1:]
                 self.__marks=self.__marks[:r]+newVal.marks()+self.__marks[r+1:]
+                self.__size=len(self.__sourceString)
                 return
 
         raise TypeError(f"Input datatype not recognized: {_typeToStr(nType)}")
@@ -204,6 +206,8 @@ class markedString:
                         return True
         return False
     def __eq__(self, otherMarkedString: markedString)-> bool:
+        if otherMarkedString is None:
+            return False
         #check that type of input is markedString
         if fType(otherMarkedString)!=markedString:
             raise TypeError(f"Attempting to check equal: {_typeToStr(otherMarkedString)} to markedString object, only markedString objects can be tested together")
@@ -218,6 +222,8 @@ class markedString:
         for mark, ch in zip(self.__marks,self.__sourceString):
             yield (ch,mark)
     def __ne__(self, other: markedString)-> bool:
+        if otherMarkedString is None:
+            return True
         #check that type of input is markedString
         if fType(other)!=markedString:
             raise TypeError(f"Attempting to check not equal: {_typeToStr(other)} to markedString object, only markedString objects can be tested together")
@@ -258,6 +264,23 @@ class markedString:
     def __mod__(self,other)->markedString:
         if fType(other)!=tuple and fType(other)!=list:
             other=(other,)
+        if len(other)!=self.__sourceString.count("%"):
+            raise TypeError(f"Number of format options does not equal number of arguments given: '{_mask(self.__sourceString)}' given {len(other)} arguments")
+        selfCopy=self[:]
+        letterCodes={'f':float,'d':int,'s':str,'m':markedString}
+        for index, item in enumerate(other):
+            fInd=self.__sourceString.find('%')
+            lTy=self.__sourceString[fInd+1]
+            if fType(item)!=letterCodes[lTy]:
+                raise TypeError(f"Mod string not given correct types, item:{index} expected: '{_typeToStr(letterCodes[lTy])}' but got '{_typeToStr(item)}'")
+            if fType(item)!=markedString:
+                item=markedString(str(item),allowedTypes=self.allowedTypes)
+            selfCopy=selfCopy[:fInd]+item+selfCopy[fInd+2:]
+        return selfCopy
+    def __rmod__(self,other)->markedString:
+        if fType(other)!=tuple and fType(other)!=list:
+            other=(other,)
+        other=other[::-1]
         if len(other)!=self.__sourceString.count("%"):
             raise TypeError(f"Number of format options does not equal number of arguments given: '{_mask(self.__sourceString)}' given {len(other)} arguments")
         selfCopy=self[:]
@@ -379,10 +402,7 @@ class markedString:
     def isalnum(self) -> bool:
         return self.__sourceString.isalnum(data)
     def isnum(self) -> bool:
-        pC=self.__sourceString.count(".")
-        if pC>1:#check if string contains multiple decimal points, ie: 12.34.56 is not a number
-            return False
-        return self.__sourceString.replace(".","").isalnum()
+        return self.__sourceString.replace(".","",1).isdigit()
     def isalpha(self):
         return self.__sourceString.isalpha()
     def isascii(self):
@@ -423,7 +443,7 @@ class markedString:
             #I assume 1 dimensional list that is not jagged
             if len(iterable)==0:
                 #account for empty input list
-                return markedString("",allowedTypes=self.allowedTypes)
+                return markedString("",[],allowedTypes=self.allowedTypes)
             if fType(iterable[0])==str:
                 #iterable is list of strings, convert all strings in list to markedString
                 for i, a in enumerate(iterable):
@@ -443,12 +463,16 @@ class markedString:
         if ind==-1:
             return (self[:],markedString('',allowedTypes=self.allowedTypes),markedString('',allowedTypes=self.allowedTypes))
         return (self[:ind],self[ind:ind+len(sep)],self[ind+len(sep):])
-    def replace(self,old: 'str,markedString,list of allowedTypes, or type in allowedTypes',new: 'str or markedString',count: int =None)->markedString:
-        if fType(new)!=str and fType(new)!=markedString:
-            raise TypeError(f"New string must be either str or markedString, type: '{_typeToStr(new)}' is not recognized")
-        if fType(new)==str:
-            new=markedString(new,allowedTypes=self.allowedTypes)
+    def replace(self,old: 'str,markedString,list of allowedTypes, or type in allowedTypes',new: markedString,count: int =None)->markedString:
+        #check input types
+        if fType(new)!=markedString:
+            raise TypeError(f"New string must be markedString, type: '{_typeToStr(new)}' is not recognized")
+        oT=fType(old)
+        if oT!=str and oT!=markedString and oT!=list and not oT in self.allowedTypes:
+            raise TypeError(f"Type not recognized for markedString replace: '{_typeToStr(oT)}'")
+        #create copy of self for output
         selfCopy=self[:]
+        #'infinity' class for infinite replace count
         class inf:
             def __isub__(self,o):
                 return self
@@ -457,16 +481,65 @@ class markedString:
         if count==None:
             count=inf()
         lR=0
-        oldSize=len(old)
+        #if oT in self.allowedTypes old is a mark, and therefore only has len 1
+        if oT in self.allowedTypes:
+            oldSize=1
+        else:
+            oldSize=len(old)
         newSize=len(new)
+        #if count is inf count>0 is always true
         while count>0:
             count-=1
+            #find next index
             fInd=selfCopy.find(old,lR)
+            #substring not found, return current markedString
             if fInd==-1:
                 return selfCopy
+            #crop around substring, and insert new string
             selfCopy=selfCopy[:fInd]+new+selfCopy[fInd+oldSize:]
+            #update lower range for find
             lR=fInd+newSize
         return selfCopy
+    def split(self,sep : 'str,markedString,list of allowedTypes, type in allowedTypes'=None,maxSplit : int = None)->'list of markedString':
+        #determine type of the seperator now, for optimization purposes
+        sT=fType(sep)
+        if sT!=str and sT!=markedString and sT!=list and not sT in self.allowedTypes:
+            raise TypeError(f"Type not recognized for markedString split: '{_typeToStr(sT)}'")
+        #if the seperator is none, return copy of self in list
+        if sep==None:
+            return [self[:]]
+        #'infinity' class for infinite split count
+        class inf:
+            def __isub__(self,o):
+                return self
+            def __gt__(self,o):
+                return True
+        if maxSplit==None:
+            maxSplit=inf()
+        lR=0
+        outputList=[]
+        #is sT in self.allowedTypes seperator is a single element, so length 1
+        if sT in self.allowedTypes:
+            sepLen=1
+        else:
+            sepLen=len(sep)
+        #if maxSplit is inf maxSplit>0 is always true
+        while maxSplit>0:
+            maxSplit-=1
+            #get index of next seperator
+            index=self.find(sep,lR)
+            #if seperator not found break out of loop
+            if index==-1:
+                break
+            else:
+                #seperator found, append substring to output
+                outputList.append(self[lR:index])
+            #assign index after current seperator to lower find range
+            lR=index+sepLen
+        #get string after last found seperator
+        outputList.append(self[lR:])
+        return outputList
+
 
 #DOCUMENTATION
 #--------------------------------------------------------------------
@@ -562,10 +635,14 @@ Example:  'Time : %d:%d' % (hour,minute)
 %m = expected markedString type"""
 markedString.__mul__.__doc__="Duplicate markedString for integer number of times"
 markedString.__rmul__.__doc__="Duplicate markedString for integer number of times"
+markedString.replace.__doc__="""Replace old value with markedString
+Count describes number of replacements, if it is None all old values will be replaced"""
+markedString.split.__doc__="""Split markedString by seperator
+maxSplit is number of splits which will occur, if maxSplit is None, there is not limit"""
 #--------------------------------------------------------------------
 
 if __name__=="__main__":
-    ignores=['__getattribute__','__rmod__','__new__']
+    ignores=['__getattribute__','__rmod__','__new__',"encode"]
     s=['STR:']
     for a in str.__dict__:
         if not a in markedString.__dict__ and not a in s and not a in ignores:
