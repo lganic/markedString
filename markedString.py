@@ -234,7 +234,9 @@ class markedString:
         #main not equals check
         return self.__sourceString!=str(other) or self.__marks!=other.marks()
     def __repr__(self)-> str:
-        return f"'{self.__sourceString}' : {_bLstStr(self.__marks)}"
+        if len(self)<1000:
+            return f"'{self.__sourceString}' : {_bLstStr(self.__marks)}"#<- this creates cleaner output, but is super slow for large output
+        return f"'{self.__sourceString}' : {str(self.__marks)}"
     def __sizeof__(self)-> int:
         return self.__sourceString.__sizeof__()+self.__marks.__sizeof__()+self.__size.__sizeof__()+self.allowedTypes.__sizeof__()
     def __lt__(self,other: 'str or markedString')-> bool:
@@ -651,15 +653,59 @@ class markedString:
         return markedString(self.__sourceString.title(),self.__marks[:],allowedTypes=self.allowedTypes)
     def center(self,width,fillMarkedString=None):
         width-=self.__size
+        #copy self for output
         selfCopy=self[:]
+        #"error" case
         if width<=0:
             return selfCopy
+        #if fillMarkedString is not defined, create a new markedString with 1 char space
         if fillMarkedString is None:
             fillMarkedString=markedString(" ",allowedTypes=self.allowedTypes)
-        if len(fillMarkedString)!=1:
+        elif len(fillMarkedString)!=1:#check error
             raise TypeError("fill string must be 1 character long")
+        #create output string
         selfCopy=fillMarkedString*(width//2)+selfCopy+fillMarkedString*(width//2+width%2)
         return selfCopy
+    def count(self,sub:'str,markedString,allowedType,list of allowedTypes')-> int:
+        #get type of input
+        sT=fType(sub)
+        if sT==str:
+            return self.__sourceString.count(sub)
+        if sT in self.allowedTypes:
+            return self.__marks.count(sub)
+        if sT==list:
+            #determine length of sub given
+            lSo=len(sub)
+            index=0
+            count=0
+            while index+lSo<=self.__size:#loop over all possible list locations
+                if self.__marks[index]==sub[0]:#if first index corrent
+                    for b in range(1,lSo):
+                        index+=1
+                        if self.__marks[index]!=sub[b]:#if next element of sublist is not valid, stop checking
+                            count-=1
+                            index-=1
+                            break
+                    count+=1
+                index+=1
+            return count
+        if sT==markedString:
+            #determine length of sub given
+            lSo=len(sub)
+            index=0
+            count=0
+            while index+lSo<=self.__size:#loop over all possible list locations
+                if self[index]==sub[0]:#if first index corrent
+                    for b in range(1,lSo):
+                        index+=1
+                        if self[index]!=sub[b]:#if next element of sublist is not valid, stop checking
+                            count-=1
+                            index-=1
+                            break
+                    count+=1
+                index+=1
+            return count
+        raise TypeError(f"Type not recognized for markedString count, expected str,markedString,allowedType or list of allowedType. Got: '{_typeToStr(sT)}'")
 
 
 #DOCUMENTATION
@@ -769,7 +815,10 @@ maxSplit describes number of splits to occur, if None there is no limit"""
 markedString.title.__doc__="""Return new markedString where all words have their first
 letter capitalized"""
 markedString.center.__doc__="""Return new markedString where string is centered with padding spaces
-if fillMarkedString is passed, the padding will be the markedString"""
+if fillMarkedString is passed, the padding will be the markedString
+fillMarkedString must be length 1, if it is not TypeError is thrown"""
+markedString.count.__doc__="""Return number of non overlapping occurences of input"""
+
 #--------------------------------------------------------------------
 
 if __name__=="__main__":
