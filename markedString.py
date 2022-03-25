@@ -706,6 +706,22 @@ class markedString:
                 index+=1
             return count
         raise TypeError(f"Type not recognized for markedString count, expected str,markedString,allowedType or list of allowedType. Got: '{_typeToStr(sT)}'")
+    def ljust(self,width,fillMarkedString=None):
+        width-=self.__size
+        #copy self for output
+        selfCopy=self[:]
+        #"error" case
+        if width<=0:
+            return selfCopy
+        #if fillMarkedString is not defined, create a new markedString with 1 char space
+        if fillMarkedString is None:
+            fillMarkedString=markedString(" ",allowedTypes=self.allowedTypes)
+        elif len(fillMarkedString)!=1:#check error
+            raise TypeError("fill string must be 1 character long")
+        #create output string
+        selfCopy=selfCopy+fillMarkedString*width
+        return selfCopy
+
 
 
 #DOCUMENTATION
@@ -818,11 +834,13 @@ markedString.center.__doc__="""Return new markedString where string is centered 
 if fillMarkedString is passed, the padding will be the markedString
 fillMarkedString must be length 1, if it is not TypeError is thrown"""
 markedString.count.__doc__="""Return number of non overlapping occurences of input"""
-
+markedString.ljust.__doc__="""Return new markedString, justified to the left by padding spaces
+if fillMarkedString is passed, the padding will be the markedString
+fillMarkedString must be length 1, if it is not TypeError is thrown"""
 #--------------------------------------------------------------------
 
 if __name__=="__main__":
-    ignores=['__getattribute__','__new__',"encode","casefold"]
+    ignores=['__getattribute__','__new__',"encode","casefold","expandtabs"]
     s=['STR:']
     for a in str.__dict__:
         if not a in markedString.__dict__ and not a in s and not a in ignores:
